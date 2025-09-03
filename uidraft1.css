@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅游搭子 - 找旅伴应用</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 430px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 顶部导航 */
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            padding: 15px 20px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-icons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .header-icon {
+            width: 28px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .header-icon:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff3838;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* 页面内容 */
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 首页地图 */
+        #map {
+            height: calc(100vh - 140px);
+            width: 100%;
+            position: relative;
+        }
+
+        .search-bar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            border-radius: 25px;
+            padding: 12px 20px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+        }
+
+        .filter-button {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            z-index: 1000;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+        }
+
+        .filter-button:hover {
+            transform: scale(1.1);
+        }
+
+        .flag-legend {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .flag-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+
+        .flag-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* 筛选面板 */
+        .filter-panel {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            box-shadow: 0 -3px 20px rgba(0, 0, 0, 0.1);
+            transition: bottom 0.3s;
+            z-index: 2000;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .filter-panel.active {
+            bottom: 0;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filter-section {
+            margin-bottom: 20px;
+        }
+
+        .filter-section h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .filter-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .filter-tag {
+            padding: 8px 16px;
+            background: #f5f5f5;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-tag.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* 卡片页面 */
+        .cards-container {
+            padding: 20px;
+            height: calc(100vh - 140px);
+            position: relative;
+        }
+
+        .buddy-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            width: calc(100% - 40px);
+            height: 550px;
+            overflow: hidden;
+            cursor: grab;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+
+        .buddy-card.dragging {
+            transition: none;
+        }
+
+        .buddy-card.swiped-left {
+            transform: translateX(-150%) rotate(-30deg);
+            opacity: 0;
+        }
+
+        .buddy-card.swiped-right {
+            transform: translateX(150%) rotate(30deg);
+            opacity: 0;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 80px;
+        }
+
+        .match-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #4CAF50;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .card-info {
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .user-info h3 {
+            font-size: 22px;
+            color: #333;
+        }
+
+        .user-meta {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .mbti-badge {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tag {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .budget-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .action-btn.skip {
+            background: #f0f0f0;
+            color: #999;
+        }
+
+        .action-btn.like {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+        }
+
+        .action-btn.super-like {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .swipes-remaining {
+            text-align: center;
+            margin-top: 15px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* 快速匹配 */
+        .quick-match-container {
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .voice-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            border: none;
+            color: white;
+            font-size: 48px;
+            cursor: pointer;
+            margin: 40px auto;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.3);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .voice-button:hover {
+            transform: scale(1.05);
+        }
+
+        .voice-button.recording {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 5px 20px rgba(255, 107, 107, 0.3); }
+            50% { box-shadow: 0 5px 30px rgba(255, 107, 107, 0.6); }
+            100% { box-shadow: 0 5px 20px rgba(255, 107, 107, 0.3); }
+        }
+
+        .quick-match-text {
+            margin-top: 20px;
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .quick-filters {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 15px;
+        }
+
+        /* 个人资料 */
+        .profile-container {
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 40px;
+        }
+
+        .rating {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        .star {
+            color: #ffd700;
+            font-size: 20px;
+        }
+
+        .profile-section {
+            background: #f9f9f9;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .profile-section h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .profile-section p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .edit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .edit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        /* 聊天列表 */
+        .chat-list {
+            padding: 20px;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+
+        .chat-info {
+            flex: 1;
+        }
+
+        .chat-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .chat-message {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .chat-meta {
+            text-align: right;
+        }
+
+        .chat-time {
+            color: #999;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .unread-badge {
+            background: #ff3838;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+
+        /* 聊天界面 */
+        .chat-window {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            z-index: 3000;
+            max-width: 430px;
+            margin: 0 auto;
+        }
+
+        .chat-window.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .chat-user-info {
+            flex: 1;
+        }
+
+        .chat-user-name {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .chat-status {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f5f5f5;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+        }
+
+        .message.sent {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message.received .message-bubble {
+            background: white;
+            color: #333;
+        }
+
+        .message.sent .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .quick-replies {
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+        }
+
+        .quick-reply {
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .quick-reply:hover {
+            background: #e0e0e0;
+        }
+
+        .chat-input-container {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* 行程计划 */
+        .itinerary-container {
+            padding: 20px;
+        }
+
+        .itinerary-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .itinerary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .itinerary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .destination {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .date-range {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .itinerary-status {
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-planning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .add-itinerary-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+            transition: all 0.3s;
+        }
+
+        .add-itinerary-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* 发现页面 */
+        .discover-container {
+            padding: 20px;
+        }
+
+        .discover-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .destination-cards {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .destination-card {
+            min-width: 200px;
+            height: 150px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .destination-card:hover {
+            transform: scale(1.05);
+        }
+
+        .destination-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            color: white;
+        }
+
+        .destination-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .destination-count {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .travel-tips {
+            background: #f9f9f9;
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        .tip-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tip-item:last-child {
+            border-bottom: none;
+        }
+
+        .tip-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .tip-content {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            max-width: 430px;
+            margin: 0 auto;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px;
+            cursor: pointer;
+            color: #999;
+            transition: all 0.3s;
+        }
+
+        .nav-item.active {
+            color: #667eea;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+        }
+
+        /* 安全中心 */
+        .safety-container {
+            padding: 20px;
+        }
+
+        .safety-feature {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .safety-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .safety-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .safety-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .safety-desc {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .verify-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .verify-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #d4edda;
+            color: #155724;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部导航 -->
+        <div class="header">
+            <h1>🌍 旅游搭子</h1>
+            <div class="header-icons">
+                <div class="header-icon" onclick="showPage('discover')">🔍</div>
+                <div class="header-icon" onclick="showPage('chat')">
+                    💬
+                    <span class="notification-badge">3</span>
+                </div>
+                <div class="header-icon" onclick="showPage('safety')">🛡️</div>
+            </div>
+        </div>
+
+        <!-- 首页 - 地图 -->
+        <div id="home" class="page active">
+            <div id="map"></div>
+            <div class="search-bar">
+                <span>🔍</span>
+                <input type="text" placeholder="搜索目的地（洲/国家/城市/景点）">
+            </div>
+            <div class="flag-legend">
+                <div class="flag-legend-item">
+                    <div class="flag-dot" style="background: #4CAF50;"></div>
+                    <span>无限期</span>
+                </div>
+            </div>
+            <div class="filter-button" onclick="toggleFilter()">⚙️</div>
+        </div>
+
+        <!-- 搭子卡片 -->
+        <div id="cards" class="page">
+            <div class="cards-container">
+                <div class="buddy-card" id="card1">
+                    <div class="card-image">
+                        👤
+                        <div class="match-badge">92% 匹配</div>
+                    </div>
+                    <div class="card-info">
+                        <div class="card-header">
+                            <div class="user-info">
+                                <h3>小明</h3>
+                                <div class="user-meta">25岁 · 男 · 北京</div>
+                            </div>
+                            <div class="mbti-badge">ENFP</div>
+                        </div>
+                        <div class="tags-container">
+                            <span class="tag">🏔️ 徒步</span>
+                            <span class="tag">📷 摄影</span>
+                            <span class="tag">🍜 美食</span>
+                            <span class="tag">🎨 文艺</span>
+                        </div>
+                        <div class="budget-info">
+                            💰 预算：普通
+                        </div>
+                        <div class="budget-info">
+                            🚗 技能：开车、英语、摄影
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn skip" onclick="swipeCard('left')">❌</button>
+                            <button class="action-btn super-like" onclick="swipeCard('super')">⭐</button>
+                            <button class="action-btn like" onclick="swipeCard('right')">❤️</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="swipes-remaining">今日剩余右滑次数：8/10</div>
+            </div>
+        </div>
+
+        <!-- 快速匹配 -->
+        <div id="quick" class="page">
+            <div class="quick-match-container">
+                <h2 style="color: #333; margin-bottom: 20px;">快速找搭子</h2>
+                <button class="voice-button" onclick="toggleRecording(this)">
+                    🎤
+                </button>
+                <div class="quick-match-text">
+                    点击麦克风，说出你的旅行需求<br>
+                    例如："我想找个会拍照的女生一起去云南"
+                </div>
+                <div class="quick-filters">
+                    <h4 style="margin-bottom: 15px;">快速筛选</h4>
+                    <div class="filter-tags">
+                        <span class="filter-tag">本周末</span>
+                        <span class="filter-tag">下个月</span>
+                        <span class="filter-tag">女生</span>
+                        <span class="filter-tag">男生</span>
+                        <span class="filter-tag">会摄影</span>
+                        <span class="filter-tag">会开车</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 个人资料 -->
+        <div id="profile" class="page">
+            <div class="profile-container">
+                <div class="profile-header">
+                    <div class="avatar">👤</div>
+                    <h2>旅行者小王</h2>
+                    <div class="rating">
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                    </div>
+                    <div class="verified-badge">✓ 已实名认证</div>
+                </div>
+
+                <div class="profile-section">
+                    <h3>📝 自我介绍</h3>
+                    <p>热爱旅行的自由职业者，喜欢探索小众目的地。擅长摄影和视频剪辑，可以帮你记录美好瞬间。性格开朗，适应能力强，是个靠谱的旅伴！</p>
+                </div>
+
+                <div class="profile-section">
+                    <h3>🏷️ 个性标签</h3>
+                    <div class="tags-container">
+                        <span class="tag">摄影达人</span>
+                        <span class="tag">美食探索</span>
+                        <span class="tag">户外运动</span>
+                        <span class="tag">文艺青年</span>
+                        <span class="tag">早起党</span>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h3>🎯 对搭子的期望</h3>
+                    <p>希望找到志同道合、时间灵活的旅伴。最好也喜欢拍照，能一起分享旅行的快乐。预算合理，不追求奢华但也不要太节省。</p>
+                </div>
+
+                <div class="profile-section">
+                    <h3>🏆 获得勋章</h3>
+                    <div class="badges-container">
+                        <span class="badge">📸 拍照达人</span>
+                        <span class="badge">🍜 干饭王</span>
+                        <span class="badge">⚡ 特种兵</span>
+                        <span class="badge">🌟 五星好评</span>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h3>📅 已计划行程</h3>
+                    <div style="margin-top: 10px;">
+                        <div style="padding: 10px; background: white; border-radius: 10px; margin-bottom: 10px;">
+                            <div style="font-weight: 600;">🇯🇵 日本关西</div>
+                            <div style="color: #666; font-size: 14px;">2025年3月15日 - 3月22日</div>
+                        </div>
+                        <div style="padding: 10px; background: white; border-radius: 10px;">
+                            <div style="font-weight: 600;">🏔️ 西藏阿里</div>
+                            <div style="color: #666; font-size: 14px;">2025年5月1日 - 5月10日</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="edit-btn">编辑个人资料</button>
+            </div>
+        </div>
+
+        <!-- 聊天列表 -->
+        <div id="chat" class="page">
+            <div class="chat-list">
+                <div class="chat-item" onclick="openChat('小美')">
+                    <div class="chat-avatar">👩</div>
+                    <div class="chat-info">
+                        <div class="chat-name">小美</div>
+                        <div class="chat-message">我们的行程安排得差不多了！</div>
+                    </div>
+                    <div class="chat-meta">
+                        <div class="chat-time">10:30</div>
+                        <span class="unread-badge">2</span>
+                    </div>
+                </div>
+                <div class="chat-item" onclick="openChat('阿杰')">
+                    <div class="chat-avatar">👨</div>
+                    <div class="chat-info">
+                        <div class="chat-name">阿杰</div>
+                        <div class="chat-message">你也要去西藏吗？</div>
+                    </div>
+                    <div class="chat-meta">
+                        <div class="chat-time">昨天</div>
+                        <span class="unread-badge">1</span>
+                    </div>
+                </div>
+                <div class="chat-item" onclick="openChat('Luna')">
+                    <div class="chat-avatar">👩</div>
+                    <div class="chat-info">
+                        <div class="chat-name">Luna</div>
+                        <div class="chat-message">分享了行程</div>
+                    </div>
+                    <div class="chat-meta">
+                        <div class="chat-time">周二</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 行程计划 -->
+        <div id="itinerary" class="page">
+            <div class="itinerary-container">
+                <h2 style="color: #333; margin-bottom: 20px;">我的行程</h2>
+                <div class="itinerary-card">
+                    <div class="itinerary-header">
+                        <div>
+                            <div class="destination">🇯🇵 日本关西之旅</div>
+                            <div class="date-range">2025.03.15 - 03.22</div>
+                        </div>
+                        <div class="itinerary-status status-confirmed">已确认</div>
+                    </div>
+                    <div style="margin-top: 10px; color: #666; font-size: 14px;">
+                        <div>👥 搭子：小美</div>
+                        <div>📍 大阪 → 京都 → 奈良</div>
+                    </div>
+                </div>
+                <div class="itinerary-card">
+                    <div class="itinerary-header">
+                        <div>
+                            <div class="destination">🏔️ 西藏阿里大环线</div>
+                            <div class="date-range">2025.05.01 - 05.10</div>
+                        </div>
+                        <div class="itinerary-status status-planning">计划中</div>
+                    </div>
+                    <div style="margin-top: 10px; color: #666; font-size: 14px;">
+                        <div>👥 搭子：招募中（2/4人）</div>
+                        <div>📍 拉萨 → 阿里 → 珠峰</div>
+                    </div>
+                </div>
+                <button class="add-itinerary-btn">+</button>
+            </div>
+        </div>
+
+        <!-- 发现页面 -->
+        <div id="discover" class="page">
+            <div class="discover-container">
+                <div class="discover-section">
+                    <h3 class="section-title">🔥 热门目的地</h3>
+                    <div class="destination-cards">
+                        <div class="destination-card">
+                            <div class="destination-info">
+                                <div class="destination-name">日本</div>
+                                <div class="destination-count">2,341 人想去</div>
+                            </div>
+                        </div>
+                        <div class="destination-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);">
+                            <div class="destination-info">
+                                <div class="destination-name">新疆</div>
+                                <div class="destination-count">1,892 人想去</div>
+                            </div>
+                        </div>
+                        <div class="destination-card" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
+                            <div class="destination-info">
+                                <div class="destination-name">泰国</div>
+                                <div class="destination-count">1,567 人想去</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="discover-section">
+                    <h3 class="section-title">💡 旅行贴士</h3>
+                    <div class="travel-tips">
+                        <div class="tip-item">
+                            <div class="tip-title">如何找到靠谱的搭子？</div>
+                            <div class="tip-content">查看实名认证、历史评价和勋章，多聊天了解对方...</div>
+                        </div>
+                        <div class="tip-item">
+                            <div class="tip-title">第一次见面注意什么？</div>
+                            <div class="tip-content">选择公共场所见面，告知朋友行程，保持警惕...</div>
+                        </div>
+                        <div class="tip-item">
+                            <div class="tip-title">如何制定完美行程？</div>
+                            <div class="tip-content">充分沟通预算和偏好，预留弹性时间，制定Plan B...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="discover-section">
+                    <h3 class="section-title">🌟 搭子故事</h3>
+                    <div style="background: #f9f9f9; border-radius: 15px; padding: 15px;">
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-weight: 600; margin-bottom: 5px;">从陌生人到最好的朋友</div>
+                            <div style="color: #666; font-size: 14px;">两个女生的新疆之旅，从APP相识到成为闺蜜...</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 5px;">一场说走就走的冒险</div>
+                            <div style="color: #666; font-size: 14px;">临时组队去西藏，收获了一生难忘的经历...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 安全中心 -->
+        <div id="safety" class="page">
+            <div class="safety-container">
+                <h2 style="color: #333; margin-bottom: 20px;">安全中心</h2>
+                
+                <div class="safety-feature">
+                    <div class="safety-header">
+                        <div class="safety-icon">✓</div>
+                        <div>
+                            <div class="safety-title">实名认证</div>
+                        </div>
+                    </div>
+                    <div class="safety-desc">
+                        通过身份证和人脸识别验证，确保用户真实身份
+                    </div>
+                    <button class="verify-btn">立即认证</button>
+                </div>
+
+                <div class="safety-feature">
+                    <div class="safety-header">
+                        <div class="safety-icon">📍</div>
+                        <div>
+                            <div class="safety-title">行程分享</div>
+                        </div>
+                    </div>
+                    <div class="safety-desc">
+                        一键分享行程给紧急联系人，让家人朋友了解你的动态
+                    </div>
+                </div>
+
+                <div class="safety-feature">
+                    <div class="safety-header">
+                        <div class="safety-icon">🚨</div>
+                        <div>
+                            <div class="safety-title">一键求助</div>
+                        </div>
+                    </div>
+                    <div class="safety-desc">
+                        遇到紧急情况，快速发送位置和求助信息给紧急联系人
+                    </div>
+                </div>
+
+                <div class="safety-feature">
+                    <div class="safety-header">
+                        <div class="safety-icon">🛡️</div>
+                        <div>
+                            <div class="safety-title">举报与屏蔽</div>
+                        </div>
+                    </div>
+                    <div class="safety-desc">
+                        发现不当行为可立即举报，我们会在24小时内处理
+                    </div>
+                </div>
+
+                <div class="safety-feature">
+                    <div class="safety-header">
+                        <div class="safety-icon">💬</div>
+                        <div>
+                            <div class="safety-title">聊天安全</div>
+                        </div>
+                    </div>
+                    <div class="safety-desc">
+                        智能检测敏感词和不当内容，保护用户聊天安全
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选面板 -->
+        <div class="filter-panel" id="filterPanel">
+            <div class="filter-header">
+                <h3>筛选条件</h3>
+                <button onclick="toggleFilter()" style="background: none; border: none; font-size: 24px;">×</button>
+            </div>
+            
+            <div class="filter-section">
+                <h4>性别</h4>
+                <div class="filter-tags">
+                    <span class="filter-tag">女生</span>
+                    <span class="filter-tag">男生</span>
+                    <span class="filter-tag active">都行</span>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h4>预算</h4>
+                <div class="filter-tags">
+                    <span class="filter-tag">奢华</span>
+                    <span class="filter-tag active">普通</span>
+                    <span class="filter-tag">节省</span>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h4>MBTI</h4>
+                <div class="filter-tags">
+                    <span class="filter-tag">INTJ</span>
+                    <span class="filter-tag">INTP</span>
+                    <span class="filter-tag">ENTJ</span>
+                    <span class="filter-tag">ENTP</span>
+                    <span class="filter-tag">INFJ</span>
+                    <span class="filter-tag">INFP</span>
+                    <span class="filter-tag">ENFJ</span>
+                    <span class="filter-tag">ENFP</span>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h4>旅行风格</h4>
+                <div class="filter-tags">
+                    <span class="filter-tag">深度游</span>
+                    <span class="filter-tag">打卡游</span>
+                    <span class="filter-tag">休闲度假</span>
+                    <span class="filter-tag">冒险探索</span>
+                    <span class="filter-tag">文化体验</span>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h4>技能</h4>
+                <div class="filter-tags">
+                    <span class="filter-tag">摄影</span>
+                    <span class="filter-tag">开车</span>
+                    <span class="filter-tag">外语</span>
+                    <span class="filter-tag">做饭</span>
+                    <span class="filter-tag">急救</span>
+                </div>
+            </div>
+
+            <button class="edit-btn" onclick="applyFilter()">应用筛选</button>
+        </div>
+
+        <!-- 聊天窗口 -->
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header">
+                <button class="back-btn" onclick="closeChat()">←</button>
+                <div class="chat-user-info">
+                    <div class="chat-user-name">小美</div>
+                    <div class="chat-status">在线</div>
+                </div>
+                <button style="background: none; border: none; color: white; font-size: 20px;">⋯</button>
+            </div>
+            
+            <div class="messages-container">
+                <div class="message received">
+                    <div class="message-bubble">你好！看到你也要去日本，什么时候出发呀？</div>
+                </div>
+                <div class="message sent">
+                    <div class="message-bubble">Hi！我计划3月15号出发，你呢？</div>
+                </div>
+                <div class="message received">
+                    <div class="message-bubble">太巧了！我也是那几天，要不要一起？</div>
+                </div>
+            </div>
+
+            <div class="quick-replies">
+                <div class="quick-reply">好呀！</div>
+                <div class="quick-reply">分享行程</div>
+                <div class="quick-reply">加个微信吧</div>
+                <div class="quick-reply">预算多少？</div>
+            </div>
+
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" placeholder="输入消息...">
+                <button class="send-btn">➤</button>
+            </div>
+        </div>
+
+        <!-- 底部导航 -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="showPage('home')">
+                <div class="nav-icon">🗺️</div>
+                <div class="nav-label">地图</div>
+            </div>
+            <div class="nav-item" onclick="showPage('cards')">
+                <div class="nav-icon">👥</div>
+                <div class="nav-label">搭子</div>
+            </div>
+            <div class="nav-item" onclick="showPage('quick')">
+                <div class="nav-icon">⚡</div>
+                <div class="nav-label">快速</div>
+            </div>
+            <div class="nav-item" onclick="showPage('itinerary')">
+                <div class="nav-icon">📅</div>
+                <div class="nav-label">行程</div>
+            </div>
+            <div class="nav-item" onclick="showPage('profile')">
+                <div class="nav-icon">👤</div>
+                <div class="nav-label">我的</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化地图
+        let map;
+        function initMap() {
+            map = L.map('map').setView([30, 110], 3);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            // 添加示例标记
+            const locations = [
+                { lat: 35.6762, lng: 139.6503, label: '东京', date: '1个月', color: '#ff3838' },
+                { lat: 31.2304, lng: 121.4737, label: '上海', date: '3个月', color: '#ff8e53' },
+                { lat: 48.8566, lng: 2.3522, label: '巴黎', date: '6个月', color: '#4a90e2' },
+                { lat: 40.7128, lng: -74.0060, label: '纽约', date: '无限期', color: '#4CAF50' }
+            ];
+
+            locations.forEach(loc => {
+                const marker = L.circleMarker([loc.lat, loc.lng], {
+                    radius: 8,
+                    fillColor: loc.color,
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+                
+                marker.bindPopup(`<b>${loc.label}</b><br>${loc.date}`);
+            });
+        }
+
+        // 页面切换
+        function showPage(pageId) {
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+            
+            const pageIndex = {
+                'home': 0,
+                'cards': 1,
+                'quick': 2,
+                'itinerary': 3,
+                'profile': 4
+            };
+            
+            if (pageIndex[pageId] !== undefined) {
+                navItems[pageIndex[pageId]].classList.add('active');
+            }
+
+            if (pageId === 'home' && !map) {
+                setTimeout(initMap, 100);
+            }
+        }
+
+        // 筛选面板
+        function toggleFilter() {
+            const panel = document.getElementById('filterPanel');
+            panel.classList.toggle('active');
+        }
+
+        function applyFilter() {
+            toggleFilter();
+            // 应用筛选逻辑
+            console.log('筛选已应用');
+        }
+
+        // 卡片滑动
+        function swipeCard(direction) {
+            const card = document.getElementById('card1');
+            if (direction === 'left') {
+                card.classList.add('swiped-left');
+            } else if (direction === 'right') {
+                card.classList.add('swiped-right');
+                // 更新剩余次数
+                const remaining = document.querySelector('.swipes-remaining');
+                remaining.textContent = '今日剩余右滑次数：7/10';
+            } else if (direction === 'super') {
+                card.classList.add('swiped-right');
+            }
+            
+            setTimeout(() => {
+                card.style.display = 'none';
+                // 加载下一张卡片
+            }, 300);
+        }
+
+        // 语音录制
+        let recording = false;
+        function toggleRecording(btn) {
+            recording = !recording;
+            if (recording) {
+                btn.classList.add('recording');
+                btn.innerHTML = '⏹️';
+            } else {
+                btn.classList.remove('recording');
+                btn.innerHTML = '🎤';
+            }
+        }
+
+        // 聊天功能
+        function openChat(userName) {
+            const chatWindow = document.getElementById('chatWindow');
+            chatWindow.classList.add('active');
+            document.querySelector('.chat-user-name').textContent = userName;
+        }
+
+        function closeChat() {
+            document.getElementById('chatWindow').classList.remove('active');
+        }
+
+        // 筛选标签点击
+        document.querySelectorAll('.filter-tag').forEach(tag => {
+            tag.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+
+        // 快速回复
+        document.querySelectorAll('.quick-reply').forEach(reply => {
+            reply.addEventListener('click', function() {
+                const input = document.querySelector('.chat-input');
+                input.value = this.textContent;
+            });
+        });
+
+        // 初始化地图
+        setTimeout(initMap, 100);
+    </script>
+</body>
+</html> class="flag-dot" style="background: #ff3838;"></div>
+                    <span>1个月内</span>
+                </div>
+                <div class="flag-legend-item">
+                    <div class="flag-dot" style="background: #ff8e53;"></div>
+                    <span>3个月内</span>
+                </div>
+                <div class="flag-legend-item">
+                    <div class="flag-dot" style="background: #4a90e2;"></div>
+                    <span>6个月内</span>
+                </div>
+                <div class="flag-legend-item">
+                    <div
